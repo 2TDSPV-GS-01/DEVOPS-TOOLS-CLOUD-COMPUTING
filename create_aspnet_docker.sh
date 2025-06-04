@@ -28,7 +28,7 @@ echo ""
 echo "============================================================"
 echo " 📦 Criando container da aplicação ASP.NET 'FonteViva'"
 echo "============================================================"
-docker run -d -p 8081:8080 -v $CAMINHO:/app --name fonte-viva fonte-viva
+docker run -d --restart unless-stopped -p 8081:8080 -v $CAMINHO:/app --network fonteviva-net --name fonte-viva fonte-viva
 
 echo ""
 echo "============================================================"
