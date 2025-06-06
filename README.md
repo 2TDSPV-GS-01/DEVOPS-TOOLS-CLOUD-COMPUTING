@@ -237,7 +237,7 @@ O Node-RED atua como middleware entre o protótipo e a API, recebendo os dados v
 
 ## **Vídeo Demonstração**
 
-YouTube: [https://youtube.com/seu-video](https://youtube.com/seu-video)
+YouTube: [DEVOPS](https://www.youtube.com/watch?v=RmSBid0cin0)
 
 ---
 
