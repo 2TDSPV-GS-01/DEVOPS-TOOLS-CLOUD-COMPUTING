@@ -1,92 +1,251 @@
-# $DEVOPS-TOOLS-CLOUD-COMPUTING$
+# $FonteViva – Estação-IoT-Autônoma$
 
-## Adicionar os usuários ao bando de dados
+Solução voltada ao **monitoramento de recursos hídricos** em cenários de risco e emergência, utilizando sensores físicos, rede MQTT e persistência em banco de dados Oracle via API.
 
-### Passo 1
+<img src="img/estacao-tratamento.jpeg" alt="Estação de tratamento" width=700/>
 
-```sql
--- Estando como SYS (com SYSDBA):
-ALTER SESSION SET CONTAINER = XEPDB1;
+> Uma solução integrada para o armazenamento, reaproveitamento e tratamento inteligente da água, com controle remoto e análise de qualidade em tempo real.
 
--- Criação dos usuários
-CREATE USER gustavo IDENTIFIED BY rm555708;
-GRANT CONNECT TO gustavo;
+## **Sobre o Projeto**
 
-CREATE USER nathalia IDENTIFIED BY rm554945;
-GRANT CONNECT TO nathalia;
+O **FonteViva** é uma mini estação de tratamento de água projetada para ser portátil, empilhável e de rápida instalação, atuando tanto em cenários de escassez quanto de excesso de água. Ela integra tecnologias sustentáveis, IoT e energia solar para garantir autonomia e eficácia.
 
-CREATE USER francesco IDENTIFIED BY rm557313;
-GRANT CONNECT TO francesco;
+### _Componentes do Sistema_
 
-CREATE USER fontevivauser IDENTIFIED BY fontevivapass;
-GRANT CONNECT TO fontevivauser;
+- **Tanque superior:** Armazena água bruta (capacidade: 30–40L)
+- **Filtro por gravidade:** Com carvão ativado e camadas filtrantes
+- **Controle eletrônico:**
+  - Medição de pH, turbidez, temperatura e volume
+  - Luz UV para controle microbiológico
+  - Comunicação via rede local (MQTT ou HTTP)
+- **Energia limpa:** Painel solar alimentando sensores e sistema
 
--- (Opcional) Permitir que criem objetos (views, procedures etc.)
-GRANT RESOURCE TO gustavo;
-GRANT RESOURCE TO nathalia;
-GRANT RESOURCE TO francesco;
-GRANT RESOURCE TO fontevivauser;
+### _Estimativa de Custos da Estação FonteViva_
 
-GRANT CREATE VIEW TO gustavo;
-GRANT CREATE VIEW TO francesco;
-GRANT CREATE VIEW TO nathalia;
-GRANT CREATE VIEW TO fontevivauser;
+| Item                                   | Descrição                           | Estimativa (R\$) |
+| -------------------------------------- | ----------------------------------- | ---------------- |
+| Tanque plástico                        | Reservatório superior de água (40L) | R\$ 50,00        |
+| Filtro por gravidade                   | Camadas de cascalho, areia e carvão | R\$ 60,00        |
+| Sensor de pH                           | Medição da acidez                   | R\$ 45,00        |
+| Sensor de turbidez                     | Verifica partículas em suspensão    | R\$ 40,00        |
+| Sensor de temperatura                  | Monitoramento térmico da água       | R\$ 30,00        |
+| Sensor de nível (ultrassônico)         | Medição de volume disponível        | R\$ 50,00        |
+| Módulo UV (esterilização)              | Controle de micro-organismos        | R\$ 70,00        |
+| ESP32 / ESP8266                        | Microcontrolador com Wi-Fi          | R\$ 35,00        |
+| Módulo MQTT / rede local               | Comunicação dos dados               | R\$ 10,00        |
+| Painel solar + controlador + bateria   | Energia limpa e sustentável         | R\$ 150,00       |
+| Estrutura física (bomba, tubos, caixa) | Instalação e vedação                | R\$ 90,00        |
+| Total estimado por unidade             |                                     | **\~R\$ 630,00** |
 
+> Valores podem reduzir com a parceria de fornecedores.
 
-ALTER USER francesco QUOTA UNLIMITED ON users;
-ALTER USER gustavo QUOTA UNLIMITED ON users;
-ALTER USER nathalia QUOTA UNLIMITED ON users;
-ALTER USER fontevivauser QUOTA UNLIMITED ON users;
+### _Viabilidade_
 
+A proposta é financeiramente acessível, de fácil transporte (empilhável como copos plásticos) e utiliza energia limpa. Ideal para contextos de emergência, comunidades isoladas ou educação ambiental.
+
+## **Arquitetura da Solução**
+
+- **Backend**: ASP.NET 8.0
+- **Banco de Dados**: Oracle XE 21c
+- **Containerização**: Docker
+- **Rede Docker**: `fonteviva-net`
+- **Volumes**: `oracle-data`
+
+<img src="img/estrutura.png" alt="Estação de tratamento" width=700/>
+
+---
+
+## **Execução com Docker**
+
+Para essa aplicação criamos uma VM Linux na Azure que atende as nossas necessidades
+
+- [Código para criar VM](/create_vm.sh)
+
+#### **Iniciar a maquina**
+
+O uso do parâmetro `--restart unless-stopped` no container run, garante que o container inicie junto da VM caso ela desligue ou reinicie.
+
+### _Banco Oracle_
+
+Usamos uma Imagem base oficial do Oracle XE:
+
+- container-registry.oracle.com/database/express:21.3.0-xe
+
+Este container fica responsável pelo nosso banco de dados ORACLE, onde foi criado perfis para cada integrante do grupo e um para usuário externo.
+
+- Possui um volume nomeado para persistência de dados de forma local.
+  > pode excluir o container e apagar a imagem não tem problema, só criar outro apontando para o mesmo volume
+
+[Dockerfile ORACLE](/database/Dockerfile)
+
+### _Aplicativo ASP.NET_
+
+Parte responsável pela nossa API com toda as comunicação com o banco de dados.
+
+[Dockerfile ASP.NET](/deploy/Dockerfile)
+
+📌 O código esta todo `compilado`, desta forma fica mais _leve_ e carrega consigo todas as dependências da aplicação.
+
+> remove a dependência da IDE e facilita o deploy
+
+- Código fonte ->[ADVANCED-BUSINESS-DEVELOPMENT-WITH-.NET](https://github.com/2TDSPV-GS-01/ADVANCED-BUSINESS-DEVELOPMENT-WITH-.NET)
+
+Ela está dividida em 2 partes:
+
+#### 1. _API_
+
+- Contem todos os métodos HTTP (GET, POST, PUT, DELETE)
+  - Salvo _RegistroMedida_ por ser um registro não se pode alterar ou apagar pela API
+- Todos os métodos estão documentados por meio do Swagger
+
+#### 2. _Modelo MVC_
+
+- Parte interativa com front
+- Permite acessar a documentação da API ou acompanhar nossos sensores
+
+Todas as classes `model` possuem uma classe `controller`, caso necessário podem ser implementados mais telas para visualizar os dados
+
+---
+
+## **Testes CRUD**
+
+Requisições realizadas com `curl`:
+
+### _Create - POST_
+
+```json
+{
+  "cpf": "46788920677",
+  "nome": "Francesco Di Benedetto"
+}
 ```
 
-### Passo 2
+![POST](/img/POST.png)
 
-dentro do meu usuário
+### _Read - GET_
 
-```sql
-BEGIN
-  -- GRANT em todas as TABELAS
-  FOR r IN (
-    SELECT table_name FROM user_tables
-  ) LOOP
-    EXECUTE IMMEDIATE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ' || r.table_name || ' TO gustavo';
-    EXECUTE IMMEDIATE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ' || r.table_name || ' TO nathalia';
-    EXECUTE IMMEDIATE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ' || r.table_name || ' TO fontevivauser';
-  END LOOP;
-
-  -- GRANT em todas as SEQUENCES
-  FOR s IN (
-    SELECT sequence_name FROM user_sequences
-  ) LOOP
-    EXECUTE IMMEDIATE 'GRANT SELECT ON ' || s.sequence_name || ' TO gustavo';
-    EXECUTE IMMEDIATE 'GRANT SELECT ON ' || s.sequence_name || ' TO nathalia';
-    EXECUTE IMMEDIATE 'GRANT SELECT ON ' || s.sequence_name || ' TO fontevivauser';
-  END LOOP;
-END;
-/
-
-CREATE OR REPLACE SYNONYM T_FV_CONTATO FOR FRANCESCO.T_FV_CONTATO;
-CREATE OR REPLACE SYNONYM T_FV_ENDERECO FOR FRANCESCO.T_FV_ENDERECO;
-CREATE OR REPLACE SYNONYM T_FV_ESTACAO_TRATAMENTO FOR FRANCESCO.T_FV_ESTACAO_TRATAMENTO;
-CREATE OR REPLACE SYNONYM T_FV_FORNECEDOR FOR FRANCESCO.T_FV_FORNECEDOR;
-CREATE OR REPLACE SYNONYM T_FV_MATERIAL FOR FRANCESCO.T_FV_MATERIAL;
-CREATE OR REPLACE SYNONYM T_FV_REGISTRO_MEDIDA FOR FRANCESCO.T_FV_REGISTRO_MEDIDA;
-CREATE OR REPLACE SYNONYM T_FV_RESPONSAVEL FOR FRANCESCO.T_FV_RESPONSAVEL;
-CREATE OR REPLACE SYNONYM T_FV_SENSOR FOR FRANCESCO.T_FV_SENSOR;
-
-CREATE OR REPLACE VIEW VIEW_T_FV_CONTATO AS SELECT * FROM T_FV_CONTATO;
-CREATE OR REPLACE VIEW VIEW_T_FV_ENDERECO AS SELECT * FROM T_FV_ENDERECO;
-CREATE OR REPLACE VIEW VIEW_T_FV_ESTACAO_TRATAMENTO AS SELECT * FROM T_FV_ESTACAO_TRATAMENTO;
-CREATE OR REPLACE VIEW VIEW_T_FV_FORNECEDOR AS SELECT * FROM T_FV_FORNECEDOR;
-CREATE OR REPLACE VIEW VIEW_T_FV_MATERIAL AS SELECT * FROM T_FV_MATERIAL;
-CREATE OR REPLACE VIEW VIEW_T_FV_REGISTRO_MEDIDA AS SELECT * FROM T_FV_REGISTRO_MEDIDA;
-CREATE OR REPLACE VIEW VIEW_T_FV_RESPONSAVEL AS SELECT * FROM T_FV_RESPONSAVEL;
-CREATE OR REPLACE VIEW VIEW_T_FV_SENSOR AS SELECT * FROM T_FV_SENSOR;
-
-CREATE OR REPLACE SYNONYM SEQ_ID_SENSOR FOR FRANCESCO.SEQ_ID_SENSOR;
-CREATE OR REPLACE SYNONYM SEQ_ID_ESTACAO FOR FRANCESCO.SEQ_ID_ESTACAO;
-CREATE OR REPLACE SYNONYM SEQ_ID_ENDERECO FOR FRANCESCO.SEQ_ID_ENDERECO;
-CREATE OR REPLACE SYNONYM SEQ_ID_CONTATO FOR FRANCESCO.SEQ_ID_CONTATO;
-CREATE OR REPLACE SYNONYM SEQ_ID_MATERIAL FOR FRANCESCO.SEQ_ID_MATERIAL;
+```sh
+http://74.163.240.0:8081/api/ResponsavelApi/46788920677
 ```
+
+![GET](/img/GET-CPF-01.png)
+
+### _Update - PUT_
+
+```bash
+{
+    "cpf": "46788920677",
+    "nome": "Francesco Monteiro Di Benedetto"
+}
+```
+
+![PUT](/img/GET-CPF-01.png)
+
+- Confirmação da atualização
+  ![GET](/img/GET-CPF-02.png)
+
+### _Delete_
+
+```sh
+http://74.163.240.0:8081/api/ResponsavelApi/46788920677
+```
+
+![PUT](/img/GET-CPF-01.png)
+
+- Confirmação da exclusão
+  ![GET](/img/GET-CPF-03.png)
+
+---
+
+## **Evidências (Terminal)**
+
+### _Logs banco de dados_
+
+```bash
+$ docker logs oracle-xe
+```
+
+![db-ready-log](/img/db-ready-log.png)
+
+### _Logs ASP.NET_
+
+```bash
+$ docker logs fonte-viva
+```
+
+#### PUT
+
+![asp.net-log](/img/net-log-create.png)
+
+#### GET
+
+Com o relacionamento 1:N, o Entity Framework faz a consulta com JOIN para retornar as outras classes ligadas a ele
+![asp.net-log](/img/net-log-read.png)
+
+#### UPDATE
+
+![asp.net-log](/img/net-log-update.png)
+
+#### DELETE
+
+![asp.net-log](/img/net-log-delete.png)
+
+### _Containers_
+
+```bash
+$ docker ps
+```
+
+![containers](/img/container-log.png)
+
+### _Imagens_
+
+```bash
+$ docker image ls
+```
+
+![imagens](/img/image-log.png)
+
+### _Volumes_
+
+```bash
+$ docker image ls
+```
+
+![imagens](/img/image-log.png)
+
+---
+
+## **Integração com IOT**
+
+Para Solução, usamos protótipos em _ESP32_ com 2 container em VM dedicados
+
+1. Mosquitto (Broker MQTT)
+2. Node-RED (Integração HTTP)
+
+O Node-RED atua como middleware entre o protótipo e a API, recebendo os dados via MQTT, formatando e entregando para o backend via HTTP.
+
+---
+
+## **RepositórioS**
+
+- GitHub: [DEVOPS-TOOLS-CLOUD-COMPUTING](https://github.com/2TDSPV-GS-01/DEVOPS-TOOLS-CLOUD-COMPUTING)
+- GitHub: [ADVANCED-BUSINESS-DEVELOPMENT-WITH-.NET](https://github.com/2TDSPV-GS-01/ADVANCED-BUSINESS-DEVELOPMENT-WITH-.NET)
+- GitHub: [DISRUPTIVE-ARCHITECTURES-IOT-IOB-GENERATIVE-IA](https://github.com/2TDSPV-GS-01/DISRUPTIVE-ARCHITECTURES-IOT-IOB-GENERATIVE-IA)
+
+---
+
+## **Vídeo Demonstração**
+
+YouTube: [https://youtube.com/seu-video](https://youtube.com/seu-video)
+
+---
+
+## **Integrantes**
+
+- Nome: Francesco Di Benedetto
+  RM: RM557313
+- Nome: Nathalia Gomes da Silva
+  RM: RM554945
+- Nome: Gustavo Goulart Bretas
+  RM: RM555708

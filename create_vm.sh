@@ -1,16 +1,14 @@
-# Comando para se criar um grupo de recussos
 az group create --name rg-FonteViva --location brazilsouth --tags environment-FonteViva
 
-# AlmaLinux é leve, compatível com Red Hat e gratuito
-# Mesmo sistema que nossa VM FREE da aula, podemos subir os testes nela
+# Usuario e senha ilustrativos
 az vm create \
     --name vm-lnx-FonteViva \
     --resource-group rg-FonteViva \
     --accelerated-networking false \
     --accept-term \
     --additional-events false \
-    --admin-password FonteViva@2tdsvms \
-    --admin-username admfonteviva \
+    --admin-password Senha@Senha \
+    --admin-username user \
     --authentication-type password \
     --computer-name FonteViva-01 \
     --enable-agent true \
@@ -30,8 +28,6 @@ az vm create \
     --ultra-ssd-enabled false \
     --zone 1
 
-# Abrir as portas necessarias
-
 az vm open-port --port 80 -g rg-FonteViva \
     -n vm-lnx-FonteViva --priority 1100
 
@@ -42,5 +38,5 @@ az vm open-port --port 8080 -g rg-FonteViva \
     -n vm-lnx-FonteViva --priority 1300
 
 # desligar de forma automatica a VM
-az vm auto-shutdown -g rg-FonteViva -n vm-lnx-FonteViva --time 2359 --email "francescomdibe@gmail.com"
+az vm auto-shutdown -g rg-FonteViva -n vm-lnx-FonteViva --time 2359 --email "email@gmail.com"
 
